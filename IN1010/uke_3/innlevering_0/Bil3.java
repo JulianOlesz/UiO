@@ -6,8 +6,8 @@ public class Bil3 {
         bilnummer = nummer;
     }
 
-    public void hentNummer(String bilnummer){
-        System.out.println(bilnummer);
+    public String hentNummer() {
+        return bilnummer;
     }
 
     public void skrivUt(){
