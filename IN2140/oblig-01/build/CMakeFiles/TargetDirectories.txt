@@ -1,0 +1,7 @@
+/home/julian/Desktop/oblig-01/build/CMakeFiles/vowelshift.dir
+/home/julian/Desktop/oblig-01/build/CMakeFiles/stringops.dir
+/home/julian/Desktop/oblig-01/build/CMakeFiles/apple.dir
+/home/julian/Desktop/oblig-01/build/CMakeFiles/package.dir
+/home/julian/Desktop/oblig-01/build/CMakeFiles/package_source.dir
+/home/julian/Desktop/oblig-01/build/CMakeFiles/edit_cache.dir
+/home/julian/Desktop/oblig-01/build/CMakeFiles/rebuild_cache.dir

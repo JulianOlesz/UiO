@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/load_fs_2.dir/load_fs_2.c.o CMakeFiles/load_fs_2.dir/block_allocation.c.o CMakeFiles/load_fs_2.dir/inode.c.o -o load_fs_2 

@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/check_fs.dir/check_fs.c.o CMakeFiles/check_fs.dir/inode.c.o CMakeFiles/check_fs.dir/block_allocation.c.o -o check_fs 
