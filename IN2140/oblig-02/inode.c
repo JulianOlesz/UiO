@@ -14,34 +14,30 @@ struct inode* create_file( struct inode* parent, const char* name, char readonly
         return NULL;
     }
 
-    // Tar inn en extent size der 0 <= extent size < 4 
+    // Tar inn en extent size der: 0 <= extent size < 4 
     // må allokere riktig antall blokker med allocate_block i block_allocation.c 
     // hvis det ikke er nok plass vil kallet mislykkes -> frigjør ressurser og return null 
 
-    int needed_blocks = (size_in_bytes + 4095) / 4096;
+    int needed_blocks = (size_in_bytes + 4095) / 4096; // fant dette på stackoverflow 
     int remaining_blocks = needed_blocks; // for å telle hvor mange ganger vi må allokere blokker
     int num_extents = 0;
     struct Extent* extents = NULL;
 
-    while (remaining_blocks > 0)
-    {
+    while (remaining_blocks > 0) {
         int blocks = (remaining_blocks > 4) ? 4 : remaining_blocks;
         int32_t blockno;
 
-        while (blocks > 0)
-        {
+        while (blocks > 0) {
             blockno = allocate_blocks(blocks);
             if (blockno != -1) break;
             blocks--;
         }
     
-        if (blockno == -1)
-        {
+        if (blockno == -1) {
             free(extents);
             return NULL;
         }
 
-        
         extents = realloc(extents, (num_extents + 1) * sizeof(struct Extent));
 
         extents[num_extents].blockno = blockno;
@@ -51,18 +47,20 @@ struct inode* create_file( struct inode* parent, const char* name, char readonly
     }
 
     struct inode* n_node = malloc(sizeof(struct inode));
+
     n_node->id = global_id_counter;
     global_id_counter++;
+
     n_node->name = malloc(strlen(name) + 1);
     strcpy(n_node->name, name);
+
     n_node->is_directory = 0;
     n_node->is_readonly = readonly;
     n_node->filesize = size_in_bytes;
     n_node->num_entries = num_extents;
     n_node->entries = (uintptr_t*)extents;
 
-    if (parent != NULL)
-    {
+    if (parent != NULL) {
         parent->entries = realloc(parent->entries, (parent->num_entries + 1) * sizeof(uintptr_t));
         parent->entries[parent->num_entries] = (uintptr_t)n_node;
         parent->num_entries++;
@@ -75,24 +73,24 @@ struct inode* create_dir( struct inode* parent, const char* name )
 {
     // sjekker om dir allerede finnes i parent 
     if (parent != NULL) {
-        if (find_inode_by_name(parent, name) != NULL) {
-            return NULL;
-        } 
+        if (find_inode_by_name(parent, name) != NULL) return NULL;
     }
 
     struct inode* child = malloc(sizeof(struct inode));
+
     child->id = global_id_counter;
     global_id_counter++;
+
     child->name = malloc(strlen(name) + 1);
-    strcpy(child->name, name); // vi leser ikke en fil direkte så navn må kopieres over 
+    strcpy(child->name, name); // navn kopieres fra parameter 
+
     child->is_directory = 1;
     child->is_readonly = 0;
     child->filesize = 0;
     child->num_entries = 0;
     child->entries = 0;
 
-    if (parent != NULL)
-    {
+    if (parent != NULL) {
         parent->entries = realloc(parent->entries, (parent->num_entries + 1) * sizeof(uintptr_t));
         parent->entries[parent->num_entries] = (uintptr_t)child;
         parent->num_entries++;
@@ -107,8 +105,7 @@ struct inode* find_inode_by_name( struct inode* parent, const char* name )
         return NULL;
     }
 
-    for (uint32_t i = 0; i < parent->num_entries; i++)
-    {
+    for (int i = 0; i < parent->num_entries; i++) {
         struct inode* entry = (struct inode*)parent->entries[i];
         if (strcmp(entry->name, name) == 0)
         {
@@ -125,12 +122,11 @@ int delete_file( struct inode* parent, struct inode* node )
         return -1;
     }
 
-    //Må shifte alle elementer til venstre, sånn at noden vi skal slette er den siste i listen
+    // må shifte alle elementer til venstre, sånn at noden vi skal slette er den siste i listen
     int i = 0;
     while ((struct inode*)parent->entries[i] != node) i++;
 
-    for (int j = i; j < parent->num_entries - 1; j++)
-    {
+    for (int j = i; j < parent->num_entries - 1; j++) {
         parent->entries[j] = parent->entries[j+1];
     }
 
@@ -160,19 +156,15 @@ int delete_file( struct inode* parent, struct inode* node )
 
 int delete_dir( struct inode* parent, struct inode* node )
 {
-    if (node->is_directory != 1 || 
-        parent->is_directory != 1 || 
-        find_inode_by_name(parent, node->name) == NULL ||
-        node->num_entries != 0)
-    {
+    if (node->is_directory != 1 || parent->is_directory != 1 || 
+        find_inode_by_name(parent, node->name) == NULL || node->num_entries != 0){
         return -1;
     }
 
     int i = 0;
     while ((struct inode*)parent->entries[i] != node) i++;
 
-    for (int j = i; j < parent->num_entries - 1; j++)
-    {
+    for (int j = i; j < parent->num_entries - 1; j++) {
         parent->entries[j] = parent->entries[j+1];
     }
 
@@ -201,18 +193,16 @@ void write_helper(FILE* file, struct inode* node) {
     fwrite(&node->is_directory, sizeof(char), 1, file);
     fwrite(&node->is_readonly, sizeof(char), 1, file);
 
-    if (node->is_directory)
-    {
+    if (node->is_directory) {
         fwrite(&node->num_entries, sizeof(uint32_t), 1, file);
 
-        for (uint32_t i = 0; i < node->num_entries; i++)
-        {
+        for (int i = 0; i < node->num_entries; i++) {
             struct inode* child = (struct inode*)node->entries[i];
             fwrite(&child->id, sizeof(uint32_t), 1, file);
         } 
         // en annen loop for å fortsette rekursivt
         // tror det kan bli problematisk å ha rekursjon samtidig som writing 
-        for (uint32_t i = 0; i < node->num_entries; i++) {
+        for (int i = 0; i < node->num_entries; i++) {
             write_helper(file, (struct inode*)node->entries[i]);
         }
     } else
@@ -220,7 +210,7 @@ void write_helper(FILE* file, struct inode* node) {
         fwrite(&node->filesize, sizeof(uint32_t), 1, file);
         fwrite(&node->num_entries, sizeof(uint32_t), 1, file);
         struct Extent* extents = (struct Extent*)node->entries;
-        for (uint32_t i = 0; i < node->num_entries; i++) {
+        for (int i = 0; i < node->num_entries; i++) {
             fwrite(&extents[i].blockno, sizeof(uint32_t), 1, file);
             fwrite(&extents[i].extent, sizeof(uint32_t), 1, file);
         }
@@ -258,56 +248,43 @@ struct inode* read_inodes(FILE* file) {
     fread(node->name, 1, name_len, file);
     node->name[name_len] = '\0';
 
-    printf("Name %s\n", node->name);
-
-
     // IS DIR
     fread(&node->is_directory, sizeof(char), 1, file);
 
     // IS RDONLY
     fread(&node->is_readonly, sizeof(char), 1, file);
 
-    printf("is dir: %d, is readonly: %d\n", node->is_directory, node->is_readonly);
+    if (node->is_directory) {
+        node->filesize = 0;
 
+        fread(&node->num_entries, sizeof(uint32_t), 1, file);
 
-    if (node->is_directory == 1)
-        {
-            node->filesize = 0;
-            
-            fread(&node->num_entries, sizeof(uint32_t), 1, file);
-
-            //printf("Entries: %d\n", node->num_entries);
-
-            if (node->num_entries == 0)
-            {
-                node->entries = NULL;
-                return node;
-            } else {
-                node->entries = malloc(node->num_entries * sizeof(uintptr_t));
-                for (uint32_t i = 0; i < node->num_entries; i++)
-                {   
-                    uint64_t id;
-                    fread(&id, sizeof(uint64_t), 1, file);
-                    node->entries[i] = (uintptr_t)id;
-                    //printf("node entry %d\n", id);
-                }
-            }
+        if (node->num_entries == 0) {
+            node->entries = NULL;
         } else {
-            uint32_t filesize;
-            fread(&node->filesize, sizeof(uint32_t), 1, file);
-
-            fread(&node->num_entries, sizeof(uint32_t), 1, file);
-        
-            node->entries = malloc(node->num_entries * sizeof(struct Extent));
-
-            struct Extent* extent = (struct Extent*)node->entries; // caster til extent type 
-
-            for (int i = 0; i < node->num_entries; i++)
-            {
-                fread(&extent[i].blockno, sizeof(uint32_t), 1, file);
-                fread(&extent[i].extent, sizeof(uint32_t), 1, file);
+            node->entries = malloc(node->num_entries * sizeof(uintptr_t));
+            for (int i = 0; i < node->num_entries; i++) {   
+                uint32_t id;
+                uint32_t padding;
+                fread(&id, sizeof(uint32_t), 1, file);
+                fread(&padding, sizeof(uint32_t), 1, file);
+                node->entries[i] = (uintptr_t)id;
             }
         }
+    } else {
+        fread(&node->filesize, sizeof(uint32_t), 1, file);
+
+        fread(&node->num_entries, sizeof(uint32_t), 1, file);
+        node->entries = malloc(node->num_entries * sizeof(struct Extent));
+
+        // caster til extent og leser 
+        struct Extent* extent = (struct Extent*)node->entries; 
+
+        for (int i = 0; i < node->num_entries; i++) {
+            fread(&extent[i].blockno, sizeof(uint32_t), 1, file);
+            fread(&extent[i].extent, sizeof(uint32_t), 1, file);
+        }
+    }
     return node;
 }
 
@@ -317,22 +294,21 @@ struct inode* load_inodes( const char* master_file_table )
 
     struct inode* root = NULL;
     struct inode* node;
+    // lager en liste med noder for å sette pointers senere
     struct inode** node_list = NULL;
-    uint32_t node_count = 0;
+    int node_count = 0;
     
-    while ((node = read_inodes(file)) != NULL)
-    { 
+    while ((node = read_inodes(file)) != NULL) { 
         struct inode** temp = realloc(node_list, (node_count + 1)*sizeof(struct inode*));
         if (temp == NULL) free(node_list);
-        node_list = temp;
 
+        node_list = temp;
         node_list[node_count++] = node;
 
         if (root == NULL) root = node;
     }
 
-    for (int i = 0; i < node_count; i++)
-    {
+    for (int i = 0; i < node_count; i++) {
         struct inode* parent = node_list[i];
         if (parent->is_directory){
             for (int j = 0; j < parent->num_entries; j++) {
@@ -352,15 +328,12 @@ struct inode* load_inodes( const char* master_file_table )
 
 void fs_shutdown( struct inode* inode )
 {
-    if (inode->is_directory == 1 && inode->num_entries != 0)
-    {
-        for (int i = 0; i < inode->num_entries; i++)
-        {
+    if (inode->is_directory == 1 && inode->num_entries != 0) {
+        for (int i = 0; i < inode->num_entries; i++) {
             fs_shutdown((struct inode*)inode->entries[i]);
         }
     }
     
-    //må bruke free for name og entries fordi de ble laget med malloc 
     free(inode->name);
     free(inode->entries);
     free(inode);
